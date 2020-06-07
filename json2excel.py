@@ -8,28 +8,52 @@ def main():
     メイン処理
     """
     # 設定ファイル読み込み
-    with open('data.json', 'r') as f:
-        try:
-            json_data = json.load(f)
+    settings = load_settings()
 
-            book = openpyxl.load_workbook('data.xlsx')
-            sheet = book['Sheet1']
+    json_data = load_data(settings)
+    book = openpyxl.load_workbook(settings['outputFile'])
+    sheet = book[settings['outputSheet']]
 
-        except Exception as e:
-            print(e)
-            sys.exit(1)
+    # ヘッダー設定
+    headers = [key for key in json_data[0].keys()]
+    for i, header in enumerate(headers):
+        sheet.cell(row=1, column=i+1).value = header
 
-    sheet.cell(row=1,column=1).value = 'text'
-    sheet.cell(row=1,column=2).value = 'size'
-    sheet.cell(row=1,column=3).value = 'opacity'
+    # データ書き込み
     for i, data in enumerate(json_data):
         target_row = i+2
-        sheet.cell(row=target_row, column=1).value = data['text']
-        sheet.cell(row=target_row, column=2).value = data['size']
-        sheet.cell(row=target_row, column=3).value = data['opacity']
+        for j, header in enumerate(headers):
+            sheet.cell(row=target_row, column=j+1).value = data[header]
 
-    book.save('data.xlsx')
+    book.save(settings['outputFile'])
     sys.exit()
 
+def load_settings():
+    with open('settings.json', 'r') as f:
+        try:
+            settings = json.load(f)
+
+            if 'dataFile' not in settings:
+                raise Exception('dataFileが設定されていません。')
+            if 'outputFile' not in settings:
+                raise Exception('outputFileが設定されていません。')
+            if 'outputSheet' not in settings:
+                raise Exception('outputSheetが設定されていません。')
+
+        except Exception as e:
+            print('設定ファイルの読み込みに失敗しました。')
+            print(e)
+            sys.exit(1)
+    return settings
+
+def load_data(settings):
+    with open(settings['dataFile'], 'r') as f:
+        try:
+            json_data = json.load(f)
+        except Exception as e:
+            print('dataFileの読み込みに失敗しました。')
+            print(e)
+            sys.exit(1)
+    return json_data
 
 main()
